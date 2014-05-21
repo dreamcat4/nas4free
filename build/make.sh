@@ -22,7 +22,7 @@ NAS4FREE_SVNDIR="$NAS4FREE_ROOTDIR/svn"
 NAS4FREE_WORLD=""
 NAS4FREE_PRODUCTNAME=$(cat $NAS4FREE_SVNDIR/etc/prd.name)
 NAS4FREE_VERSION=$(cat $NAS4FREE_SVNDIR/etc/prd.version)
-NAS4FREE_REVISION=$(svn info ${NAS4FREE_SVNDIR} | grep "Revision:" | awk '{print $2}')
+NAS4FREE_REVISION="r$(svn info ${NAS4FREE_SVNDIR} | grep "Revision:" | awk '{print $2}')"
 if [ -f "${NAS4FREE_SVNDIR}/local.revision" ]; then
 	NAS4FREE_REVISION=$(printf $(cat ${NAS4FREE_SVNDIR}/local.revision) ${NAS4FREE_REVISION})
 fi
@@ -324,7 +324,7 @@ build_kernel() {
 				[ 0 != $? ] && return 1;; # successful?
 			build)
 				# Copy kernel configuration.
-				cd /sys/${NAS4FREE_ARCH}/conf;
+				cd /usr/src/sys/${NAS4FREE_ARCH}/conf;
 				cp -f $NAS4FREE_SVNDIR/build/kernel-config/${NAS4FREE_KERNCONF} .;
 				# Clean object directory.
 				rm -f -r ${NAS4FREE_OBJDIRPREFIX};
@@ -463,6 +463,32 @@ copy_kmod() {
 	return 0;
 }
 
+grep_fbsd_rev() {
+	# Determine the FreeBSD revision number
+	VERS_C_BUILD_DIR="${NAS4FREE_OBJDIRPREFIX}/usr/src/sys/${NAS4FREE_KERNCONF}"
+	VERS_C="${VERS_C_BUILD_DIR}/vers.c"
+
+	if [ -e "/usr/src/sys/conf/newvers.sh" ]; then
+		if [ ! -e "$VERS_C" ]; then
+			_cwd="$(pwd)"
+			mkdir -p "$VERS_C_BUILD_DIR"
+			cd "$VERS_C_BUILD_DIR"
+			sh "/usr/src/sys/conf/newvers.sh"
+			cd "$_cwd"
+		fi
+
+		if [ -e "$VERS_C" ]; then
+			rev="$(grep "define VERSTR" "$VERS_C" | grep -o "#[0-9].*:" | cut -d ' ' -f 2 | sed -e "s/+[r0-9]*_n4f//g")"
+			rev="${rev%:}"
+			rev="${rev#r}" # comment-out to include leading 'r' of the Freebsd revision number
+		fi
+	fi
+
+	if [ "$rev" ]; then
+		echo "${rev}-"
+	fi
+}
+
 create_image() {
 	echo "--------------------------------------------------------------"
 	echo ">>> Generating ${NAS4FREE_PRODUCTNAME} IMG File (to be rawrite on CF/USB/HD/SSD)"
@@ -485,10 +511,11 @@ create_image() {
 	# Set build time.
 	date > ${NAS4FREE_ROOTFS}/etc/prd.version.buildtime
 
-	# Set revision.
+	# Set Revision.
 	echo ${NAS4FREE_REVISION} > ${NAS4FREE_ROOTFS}/etc/prd.revision
+	FREEBSD_REVISION="$(grep_fbsd_rev)"
 
-	IMGFILENAME="${NAS4FREE_PRODUCTNAME}-${PLATFORM}-${NAS4FREE_VERSION}.${NAS4FREE_REVISION}.img"
+	IMGFILENAME="${NAS4FREE_PRODUCTNAME}-${PLATFORM}-${NAS4FREE_VERSION}-${FREEBSD_REVISION}${NAS4FREE_REVISION}.gz.img"
 
 	echo "===> Generating tempory $NAS4FREE_TMPDIR folder"
 	mkdir $NAS4FREE_TMPDIR
@@ -584,12 +611,12 @@ create_iso () {
 	[ -f $NAS4FREE_WORKINGDIR/mfsroot.gz ] && rm -f $NAS4FREE_WORKINGDIR/mfsroot.gz
 
 	if [ ! $TINY_ISO ]; then
-		LABEL="${NAS4FREE_PRODUCTNAME}-${NAS4FREE_XARCH}-LiveCD-${NAS4FREE_VERSION}.${NAS4FREE_REVISION}"
+		LABEL="${NAS4FREE_PRODUCTNAME}-${NAS4FREE_XARCH}-LiveCD-${NAS4FREE_VERSION}-${FREEBSD_REVISION}${NAS4FREE_REVISION}"
 		VOLUMEID="${NAS4FREE_PRODUCTNAME}-${NAS4FREE_XARCH}-LiveCD-${NAS4FREE_VERSION}"
 		echo "ISO: Generating the $NAS4FREE_PRODUCTNAME Image file:"
 		create_image;
 	else
-		LABEL="${NAS4FREE_PRODUCTNAME}-${NAS4FREE_XARCH}-LiveCD-Tiny-${NAS4FREE_VERSION}.${NAS4FREE_REVISION}"
+		LABEL="${NAS4FREE_PRODUCTNAME}-${NAS4FREE_XARCH}-LiveCD-Tiny-${NAS4FREE_VERSION}-${FREEBSD_REVISION}${NAS4FREE_REVISION}"
 		VOLUMEID="${NAS4FREE_PRODUCTNAME}-${NAS4FREE_XARCH}-LiveCD-Tiny-${NAS4FREE_VERSION}"
 	fi
 
@@ -599,6 +626,7 @@ create_iso () {
 
 	# Set Revision.
 	echo ${NAS4FREE_REVISION} > ${NAS4FREE_ROOTFS}/etc/prd.revision
+	FREEBSD_REVISION="$(grep_fbsd_rev)"
 
 	echo "ISO: Generating temporary folder '$NAS4FREE_TMPDIR'"
 	mkdir $NAS4FREE_TMPDIR
@@ -658,7 +686,7 @@ create_iso () {
 	[ 0 != $? ] && return 1 # successful?
 
 	echo "Generating SHA256 CHECKSUM File"
-	NAS4FREE_CHECKSUMFILENAME="${NAS4FREE_PRODUCTNAME}-${NAS4FREE_XARCH}-${NAS4FREE_VERSION}.${NAS4FREE_REVISION}.checksum"
+	NAS4FREE_CHECKSUMFILENAME="${NAS4FREE_PRODUCTNAME}-${NAS4FREE_XARCH}-${NAS4FREE_VERSION}-${FREEBSD_REVISION}${NAS4FREE_REVISION}.checksum"
 	cd ${NAS4FREE_ROOTDIR} && sha256 *.img *.iso > ${NAS4FREE_ROOTDIR}/${NAS4FREE_CHECKSUMFILENAME}
 
 	# Cleanup.
@@ -699,8 +727,9 @@ create_usb () {
 
 	# Set Revision.
 	echo ${NAS4FREE_REVISION} > ${NAS4FREE_ROOTFS}/etc/prd.revision
+	FREEBSD_REVISION="$(grep_fbsd_rev)"
 
-	IMGFILENAME="${NAS4FREE_PRODUCTNAME}-${NAS4FREE_XARCH}-LiveUSB-${NAS4FREE_VERSION}.${NAS4FREE_REVISION}.img"
+	IMGFILENAME="${NAS4FREE_PRODUCTNAME}-${NAS4FREE_XARCH}-LiveUSB-${NAS4FREE_VERSION}-${FREEBSD_REVISION}${NAS4FREE_REVISION}.img"
 
 	echo "USB: Generating temporary folder '$NAS4FREE_TMPDIR'"
 	mkdir $NAS4FREE_TMPDIR
@@ -791,7 +820,7 @@ create_usb () {
 	cp $NAS4FREE_WORKINGDIR/usb-image.bin $NAS4FREE_ROOTDIR/$IMGFILENAME
 
 	echo "Generating SHA256 CHECKSUM File"
-	NAS4FREE_CHECKSUMFILENAME="${NAS4FREE_PRODUCTNAME}-${NAS4FREE_XARCH}-${NAS4FREE_VERSION}.${NAS4FREE_REVISION}.checksum"
+	NAS4FREE_CHECKSUMFILENAME="${NAS4FREE_PRODUCTNAME}-${NAS4FREE_XARCH}-${NAS4FREE_VERSION}-${FREEBSD_REVISION}${NAS4FREE_REVISION}.checksum"
 	cd ${NAS4FREE_ROOTDIR} && sha256 *.img *.iso > ${NAS4FREE_ROOTDIR}/${NAS4FREE_CHECKSUMFILENAME}
 
 	# Cleanup.
@@ -814,8 +843,9 @@ create_full() {
 
 	# Set Revision.
 	echo ${NAS4FREE_REVISION} > ${NAS4FREE_ROOTFS}/etc/prd.revision
+	FREEBSD_REVISION="$(grep_fbsd_rev)"
 
-	FULLFILENAME="${NAS4FREE_PRODUCTNAME}-${PLATFORM}-${NAS4FREE_VERSION}.${NAS4FREE_REVISION}.tgz"
+	FULLFILENAME="${NAS4FREE_PRODUCTNAME}-${PLATFORM}-${NAS4FREE_VERSION}-${FREEBSD_REVISION}${NAS4FREE_REVISION}.tgz"
 
 	echo "FULL: Generating tempory $NAS4FREE_TMPDIR folder"
 	#Clean TMP dir:
@@ -909,7 +939,7 @@ update_svn() {
 	svn co $NAS4FREE_SVNURL svn
 
 	# Update Revision Number.
-	NAS4FREE_REVISION=$(svn info ${NAS4FREE_SVNDIR} | grep Revision | awk '{print $2}')
+	NAS4FREE_REVISION="r$(svn info ${NAS4FREE_SVNDIR} | grep Revision | awk '{print $2}')"
 
 	return 0
 }

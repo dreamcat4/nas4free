@@ -1,0 +1,19 @@
+--- sys/conf/newvers.sh.orig	2014-05-23 16:49:33.398890885 +0100
++++ sys/conf/newvers.sh	2014-05-23 16:58:12.864885556 +0100
+@@ -134,10 +134,14 @@
+ 	fi
+ fi
+
++if [ -e "/usr/local/nas4free/rootfs/etc/prd.revision" ]; then
++  n4f="+$(cat /usr/local/nas4free/rootfs/etc/prd.revision)_n4f"
++fi
++
+ cat << EOF > vers.c
+ $COPYRIGHT
+-#define SCCSSTR "@(#)${VERSION} #${v}${svn}${git}: ${t}"
+-#define VERSTR "${VERSION} #${v}${svn}${git}: ${t}\\n    ${u}@${h}:${d}\\n"
++#define SCCSSTR "@(#)${VERSION} #${v}${svn}${git}${n4f}: ${t}"
++#define VERSTR "${VERSION} #${v}${svn}${git}${n4f}: ${t}\\n    ${u}@${h}:${d}\\n"
+ #define RELSTR "${RELEASE}"
+
+ char sccs[sizeof(SCCSSTR) > 128 ? sizeof(SCCSSTR) : 128] = SCCSSTR;

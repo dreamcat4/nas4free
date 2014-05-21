@@ -156,9 +156,9 @@ function get_latest_file($rss) {
 		$filename = $parts['filename'];
 		$fullname = $parts['filename'].".".$parts['extension'];
 
-		if (preg_match("/^{$product}-{$platform}-(.*?)\.(\d+)$/", $filename, $m)) {
+		if (preg_match("/^{$product}-{$platform}-(.*?)-(.*?)-r(\d+)$/", $filename, $m)) {
 			$filever = $m[1];
-			$filerev = $m[2];
+			$filerev = $m[3];
 			if ($version < $filever
 			    || ($version == $filever && $revision < $filerev)) {
 				$resp .= sprintf("<a href=\"%s\" title=\"%s\" target=\"_blank\">%s</a> (%s)",
@@ -211,7 +211,7 @@ if ($_POST && !file_exists($d_firmwarelock_path)) {
 	else if (stristr($_POST['Submit'], gettext("Upgrade firmware")) || $_POST['sig_override'])
 		$mode = "upgrade";
 	else if ($_POST['sig_no'])
-		unlink("{$g['ftmp_path']}/firmware.img");
+		unlink("{$g['ftmp_path']}/firmware.gz.img");
 
 	if ($mode) {
 		if ($mode === "enable") {
@@ -235,11 +235,11 @@ if ($_POST && !file_exists($d_firmwarelock_path)) {
 					$input_errors[] = gettext("Image upload failed (out of memory?)");
 				} else {
 					/* move the image so PHP won't delete it */
-					move_uploaded_file($_FILES['ulfile']['tmp_name'], "{$g['ftmp_path']}/firmware.img");
+					move_uploaded_file($_FILES['ulfile']['tmp_name'], "{$g['ftmp_path']}/firmware.gz.img");
 
-					if (!verify_gzip_file("{$g['ftmp_path']}/firmware.img")) {
+					if (!verify_gzip_file("{$g['ftmp_path']}/firmware.gz.img")) {
 						$input_errors[] = gettext("The image file is corrupt");
-						unlink("{$g['ftmp_path']}/firmware.img");
+						unlink("{$g['ftmp_path']}/firmware.gz.img");
 					}
 				}
 			} else {
@@ -258,11 +258,11 @@ if ($_POST && !file_exists($d_firmwarelock_path)) {
 
 				switch($g['platform']) {
 					case "embedded":
-						rc_exec_script_async("/etc/rc.firmware upgrade {$g['ftmp_path']}/firmware.img");
+						rc_exec_script_async("/etc/rc.firmware upgrade {$g['ftmp_path']}/firmware.gz.img");
 						break;
 
 					case "full":
-						rc_exec_script_async("/etc/rc.firmware fullupgrade {$g['ftmp_path']}/firmware.img");
+						rc_exec_script_async("/etc/rc.firmware fullupgrade {$g['ftmp_path']}/firmware.gz.img");
 						break;
 				}
 

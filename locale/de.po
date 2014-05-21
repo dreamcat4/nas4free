@@ -1050,7 +1050,7 @@ msgid ""
 "image file for flashing.<br />Click &quot;Upgrade firmware&quot; to start "
 "the upgrade process."
 msgstr ""
-"&quot anklicken; Firmware upload erlauben&quot; dann die Imagedatei (.img) "
+"&quot anklicken; Firmware upload erlauben&quot; dann die Imagedatei (.gz.img) "
 "auswählen .<br />Click &quot;Upgrade firmware&quot; um den Upgrade Vorgang "
 "zu starten."
 

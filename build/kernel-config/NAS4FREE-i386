@@ -12,9 +12,11 @@ options		KVA_PAGES=512
 options		VM_KMEM_SIZE_SCALE=2
 options		VM_KMEM_SIZE_MAX=(1280UL*1024*1024)
 
-# Networking options
+# Networking
 #options		DEVICE_POLLING
 #options		HZ=1000
+options		VIMAGE		# Vnet jails
+device			epair		# Vnet jails
 
 # GEOM classes
 options 	GEOM_ELI		# Disk encryption.

@@ -9,9 +9,11 @@ device		speaker
 # for ZFS tuning
 options		VM_KMEM_SIZE_SCALE=2
 
-# Networking options
+# Networking
 #options		DEVICE_POLLING
 #options		HZ=1000
+options		VIMAGE		# Vnet jails
+device			epair		# Vnet jails
 
 # GEOM classes
 options 	GEOM_ELI		# Disk encryption.
